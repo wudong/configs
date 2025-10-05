@@ -23,3 +23,10 @@ Thumbs.db
 *.tmp
 *.temp
 *.log
+
+# SSH keys and sensitive files
+ssh/id_rsa
+ssh/id_rsa.pub
+ssh/known_hosts*
+ssh/*.key
+ssh/*.pem
