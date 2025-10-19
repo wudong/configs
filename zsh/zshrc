@@ -58,4 +58,14 @@ esac
 if [ -f ~/.zshenv.local ]; then
   source ~/.zshenv.local
 fi
+
+# Claude CLI aliases with different API endpoints
+alias c-z1='ANTHROPIC_BASE_URL=https://api.z.ai/api/anthropic ANTHROPIC_AUTH_TOKEN=$CLAUDE_Z1_TOKEN claude'
+alias c-z2='ANTHROPIC_BASE_URL=https://api.z.ai/api/anthropic ANTHROPIC_AUTH_TOKEN=$CLAUDE_Z2_TOKEN claude'
+
+# Emacs client aliases
+alias ec='emacsclient -c'  # Open file in new GUI frame
+alias et='emacsclient -t'  # Open file in terminal frame
+alias e='emacsclient -n'   # Open file in existing frame without waiting
+
 ___MY_VMOPTIONS_SHELL_FILE="${HOME}/.jetbrains.vmoptions.sh"; if [ -f "${___MY_VMOPTIONS_SHELL_FILE}" ]; then . "${___MY_VMOPTIONS_SHELL_FILE}"; fi
