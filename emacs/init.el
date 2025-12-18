@@ -3,142 +3,169 @@
 ;; ####################################################################
 ;; # 1. PACKAGE MANAGEMENT (using the built-in `package.el`)
 ;; ####################################################################
+;; This section ensures `package.el` is ready and sets up the MELPA
+;; archive, which has the largest collection of Emacs packages.
+
 (require 'package)
 (setq package-enable-at-startup nil)
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+
+
 (package-initialize)
 
-;; Bootstrap `use-package`, a macro that simplifies package configuration.
-(unless (package-installed-p 'use-package)
-  (condition-case err
-      (progn
-        (package-refresh-contents)
-        (package-install 'use-package))
-    (error
-     (message "Failed to install use-package: %s" err))))
-
-(eval-when-compile
-  (require 'use-package))
+;; use-package is built-in to Emacs 30+
+(require 'use-package)
 (setq use-package-always-ensure t)
+
 
 ;; ####################################################################
 ;; # 2. MACOS SPECIFIC TWEAKS
 ;; ####################################################################
+;; This is the most important section for a smooth experience on macOS.
+
+;; Use Command key (⌘) as Super, and Option key (⌥) as Meta.
+;; This feels natural on a Mac keyboard.
 (setq mac-command-modifier 'super)
 (setq mac-option-modifier 'meta)
+
 
 ;; ####################################################################
 ;; # 3. UI & UX CONFIGURATION
 ;; ####################################################################
 
-;; Basic UI Cleanup
-(tool-bar-mode -1)
-(scroll-bar-mode -1)
-(setq inhibit-startup-screen t)
+;; A. Basic UI Cleanup
+;; -------------------
+(tool-bar-mode -1)      ; Disable the toolbar
+(menu-bar-mode t)      ; Disable the menu bar
+(scroll-bar-mode -1)    ; Disable scroll bars
+(setq inhibit-startup-screen t) ; Disable the splash screen
 
-;; Font and Theme
-(condition-case nil
-    (set-face-attribute 'default nil :font "SF Mono" :height 160)
-  (error
-   ;; Fallback to other common monospace fonts if SF Mono is not available
-   (let ((fonts '("Monaco" "Menlo" "Consolas" "Courier New")))
-     (catch 'found
-       (dolist (font fonts)
-         (when (member font (font-family-list))
-           (set-face-attribute 'default nil :font font :height 160)
-           (throw 'found font)))))))
+;; B. Font and Theme
+;; -----------------
+;; Set SF Mono as the default font (Apple's excellent coding font)
+(set-face-attribute 'default nil :font "SF Mono" :height 160)
 
-;; Use doom-one theme
+;; Enable programming ligatures (e.g., combines '!=' into '≠')
+(setq-default prettify-symbols-unprettify-at-point 'right-edge)
+(global-prettify-symbols-mode 1)
+
+
+;; Use doom-one theme - a popular dark theme from doom-emacs
 (use-package doom-themes
+  :ensure t
   :config
-  (load-theme 'doom-one t))
+  (setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
+        doom-themes-enable-italic t) ; if nil, italics is universally disabled
+  (load-theme 'doom-one t)
 
-;; Quality of Life
-(global-display-line-numbers-mode t)
-(delete-selection-mode t)
-(electric-pair-mode t)
-(column-number-mode t)
-(fset 'yes-or-no-p 'y-or-n-p)
+  ;; Enable flashing mode-line on errors
+  (doom-themes-visual-bell-config)
+
+  ;; Corrects (and improves) org-mode's native fontification.
+  (doom-themes-org-config))
+
+;; Install all-the-icons for proper icon support
+(use-package all-the-icons
+  :ensure t
+  :if (display-graphic-p))
+
+;; Use doom-modeline for a more attractive status line
+;;(use-package doom-modeline
+;;  :ensure t
+;;  :init (doom-modeline-mode 1)
+;;  :config
+;;  (setq doom-modeline-height 28
+;;        doom-modeline-bar-width 4
+;;        doom-modeline-unicode-fallback t          ; Use fallback for unicode issues
+;;        doom-modeline-buffer-file-name-style 'truncate-upto-project)
+
+  ;; Make modeline more readable by customizing faces
+;;  (custom-set-faces
+;;;;;;;;   '(mode-line ((t (:background "#3f444a" :foreground "#bbc2cf" :box (:line-width 1 :color "#5B6268")))))
+;;   '(mode-line-inactive ((t (:background "#23272e" :foreground "#5B6268"))))
+   ;; Fix line number colors to match doom-one theme
+;;   '(line-number ((t (:foreground "#5B6268" :background "#3f444a"))))
+;;   '(line-number-current-line ((t (:foreground "#51afef" :background "#3f444a" :weight bold))))
+   ;; Add divider between line numbers and editor
+;;   '(fringe ((t (:background "#21242b" :foreground "#5B6268"))))))
+
+;; C. Quality of Life
+;; ------------------
+(global-display-line-numbers-mode t) ; Show line numbers
+(delete-selection-mode t)            ; Typing replaces the selection
+(electric-pair-mode t)               ; Auto-close parentheses, quotes, etc.
+(column-number-mode t)               ; Show column number in the modeline
+(global-auto-revert-mode t)          ; Auto-refresh buffers when files change on disk
+(fset 'yes-or-no-p 'y-or-n-p)         ; Use y/n instead of "yes" or "no"
+
+;; Open existing files as read-only by default
+(add-hook 'find-file-hook
+          (lambda ()
+            (when (file-exists-p (buffer-file-name))
+              (read-only-mode 1))))
+
 
 ;; ####################################################################
 ;; # 4. ESSENTIAL PACKAGES
 ;; ####################################################################
 
-;; which-key
+;; `which-key`: Shows available keybindings when you pause after a prefix key.
+;; Invaluable for learning and discovery.
 (use-package which-key
   :config
   (which-key-mode))
 
-;; vertico completion
+;; `vertico`: A modern, minimal, and fast vertical completion UI.
+;; This is a huge improvement over the default completion system.
 (use-package vertico
-  :config
-  (when (fboundp 'vertico-mode)
-    (vertico-mode)
-    (setq vertico-cycle t)))
+  :init
+  (vertico-mode)
+  ;; Add some tweaks for a better experience.
+  (setq vertico-cycle t))
 
-;; marginalia annotations
+;; `marginalia`: Adds helpful annotations to completion candidates in the minibuffer.
 (use-package marginalia
   :after vertico
-  :config
-  (when (fboundp 'marginalia-mode)
-    (marginalia-mode)))
+  :init
+  (marginalia-mode))
 
-;; orderless completion style
+;; `orderless`: A more powerful and intuitive completion style.
+;; Allows you to type space-separated terms in any order.
 (use-package orderless
-  :config
+  :init
   (setq completion-styles '(orderless basic)
         completion-category-defaults nil
         completion-category-overrides '((file (styles basic partial-completion)))))
 
-;; magit
+;; Make saving the file list on exit less annoying
+(setq save-place-file (concat user-emacs-directory "places"))
+
+;; some more plugins
 (use-package magit
   :bind ("C-x g" . magit-status))
 
-;; Built-in project management
-(require 'project)
 
-;; LSP convenience keybindings (global)
-(global-set-key (kbd "C-c l .") 'xref-find-definitions)
-(global-set-key (kbd "C-c l ,") 'xref-go-back)
-(global-set-key (kbd "C-c l ;") 'xref-find-references)
-(global-set-key (kbd "M-?") 'xref-find-references)
+;; ediff config
+(setq ediff-window-setup-function 'ediff-setup-windows-plain)
+(setq ediff-split-window-function 'split-window-horizontally)
 
-;; Eglot LSP client for intelligent code completion
-(use-package eglot
-  :config
-  ;; TypeScript/JavaScript LSP server configuration
-  (setq eglot-workspace-configuration
-        '((:typescript .
-           ((:preferences . ((:includeInlayParameterNameHints . "all")
-                           (:includeInlayParameterNameHintsWhenArgumentMatchesName . t)
-                           (:includeInlayFunctionParameterTypeHints . t)
-                           (:includeInlayVariableTypeHints . t)
-                           (:includeInlayPropertyDeclarationTypeHints . t)
-                           (:includeInlayFunctionLikeReturnTypeHints . t)
-                           (:includeInlayEnumMemberValueHints . t)))))))
+;; A suite of powerful search and navigation commands
+(use-package consult
+  ;; Bind keys globally. The syntax is a simple list of ("key" . command).
+  :bind (("C-s" . consult-line)
+         ("C-x b" . consult-buffer)
+         ("C-c g" . consult-git-grep)
+         ("C-c r" . consult-ripgrep)))
 
-  ;; General eglot settings for better UX
-  (setq eglot-sync-timeout 2
-        eglot-autoshutdown t
-        eglot-extend-to-xref t
-        eglot-events-buffer-size 0
-        eglot-send-changes-idle-time 0.5)
+;; Set the file where customizations are saved
+(setq custom-file (concat user-emacs-directory "custom.el"))
 
-  ;; Keybindings for LSP features
-  (define-key eglot-mode-map (kbd "C-c l r") 'eglot-rename)
-  (define-key eglot-mode-map (kbd "C-c l f") 'eglot-format)
-  (define-key eglot-mode-map (kbd "C-c l a") 'eglot-code-actions)
-  (define-key eglot-mode-map (kbd "C-c l d") 'eglot-find-declaration)
-  (define-key eglot-mode-map (kbd "C-c l i") 'eglot-find-implementation)
-  (define-key eglot-mode-map (kbd "C-c l t") 'eglot-find-typeDefinition)
-  (define-key eglot-mode-map (kbd "C-c l h") 'eldoc)
-  (define-key eglot-mode-map (kbd "C-c l s") 'eglot-signature-eldoc-doc)
-
-  ;; Auto-enable eglot for TypeScript and JavaScript files
-  :hook
-  ((typescript-mode . eglot-ensure)
-   (js2-mode . eglot-ensure)
-   (web-mode . eglot-ensure)))
+(use-package markdown-mode
+  :ensure t
+  :mode ("README\\.md\\'" . gfm-mode)
+  :init (setq markdown-command "multimarkdown")
+  :bind (:map markdown-mode-map
+              ("C-c C-e" . markdown-do)))
 
 ;; TypeScript and JavaScript syntax support
 (use-package typescript-mode
@@ -156,24 +183,29 @@
   (setq js2-basic-offset 2
         js2-strict-missing-semi-warning nil))
 
-;; Additional LSP utilities
-(use-package xref
+;; Additional JavaScript/TypeScript enhancements
+(use-package web-mode
+  :ensure t
+  :mode (("\\.html\\'" . web-mode)
+         ("\\.vue\\'" . web-mode)
+         ("\\.svelte\\'" . web-mode))
   :config
-  ;; Use project.el for xref definitions
-  (setq xref-search-program 'ripgrep
-        xref-show-definitions-function #'xref-show-definitions-completing))
+  (setq web-mode-markup-indent-offset 2
+        web-mode-css-indent-offset 2
+        web-mode-code-indent-offset 2))
 
-;; consult
-(use-package consult
-  :bind (("C-s" . consult-line)
-         ("C-x b" . consult-buffer)
-         ("C-c g" . consult-git-grep)
-         ("C-c r" . consult-ripgrep)
-         ("C-c p b" . consult-project-buffer)))
+;; JSON support
+(use-package json-mode
+  :ensure t
+  :mode (("\\.json\\'" . json-mode)
+         ("\\.jsonc\\'" . json-mode)))
+
+
 
 ;; ####################################################################
 ;; # 5. SERVER MODE CONFIGURATION
 ;; ####################################################################
+;; Start Emacs server for fast client connections
 (require 'server)
 (unless (server-running-p)
   (server-start))
@@ -189,10 +221,8 @@
 ;; Alternative way to safely kill Emacs
 (global-set-key (kbd "C-x C-S-c") 'save-buffers-kill-emacs)
 
-;; Save autosaved file to temp folder
+;; Save autosaved file to temp folder.
 (setq backup-directory-alist
     `((".*" . ,temporary-file-directory)))
 (setq auto-save-file-name-transforms
     `((".*" ,temporary-file-directory t)))
-
-;;; init.el ends here
