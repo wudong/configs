@@ -23,18 +23,6 @@ This repository uses a version-and-link approach:
 2. **Create symbolic links**: Link configs to their original system locations
 3. **Use setup scripts**: Create shell scripts to automate linking process
 
-Current directory structure:
-```
-configs/
-├── zsh/           # Z shell configuration (zshrc)
-├── emacs/         # Emacs configuration (init.el, elpa packages)
-├── tmux/          # Terminal multiplexer configurations
-├── ssh/           # SSH keys and known hosts
-├── fonts/         # JetBrains Mono font files (ttf, variable, webfonts)
-├── scripts/       # Setup and utility scripts
-├── claude-code/   # Claude Code specific configurations
-└── .gitignore     # Git ignore rules
-```
 
 Linking commands:
 ```bash

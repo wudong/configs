@@ -1,4 +1,19 @@
 {
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/anti_sycophant.py",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  },
+  "alwaysThinkingEnabled": false,
   "allow": [
     "Bash(cat:*)",
     "Bash(head:*)",
@@ -105,14 +120,5 @@
     "Bash(rsync:*)",
     "Bash(scp:*)"
   ],
-  "hooks": {
-    "Stop": [{
-      "matcher": "",
-      "hooks": [{
-        "type": "command",
-        "command": "~/.claude/hooks/anti_sycophant.py",
-        "timeout": 5
-      }]
-    }]
-  }
+  "model": "haiku"
 }

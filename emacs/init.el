@@ -1,123 +1,198 @@
-;;; init.el --- Emacs configuration optimized for macOS
+;; -*- lexical-binding: t -*-
 
-;; Basic settings
-(setq inhibit-startup-message t)
-(tool-bar-mode -1)
-(menu-bar-mode -1)
-(scroll-bar-mode -1)
-
-;; UTF-8 encoding for proper Unicode support
-(set-language-environment "UTF-8")
-(set-terminal-coding-system 'utf-8)
-(set-keyboard-coding-system 'utf-8)
-(set-selection-coding-system 'utf-8)
-(prefer-coding-system 'utf-8)
-
-;; Package management
+;; ####################################################################
+;; # 1. PACKAGE MANAGEMENT (using the built-in `package.el`)
+;; ####################################################################
 (require 'package)
-(setq package-archives '(("melpa" . "https://melpa.org/packages/")
-                         ("elpa" . "https://elpa.gnu.org/packages/")))
+(setq package-enable-at-startup nil)
+(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
 (package-initialize)
 
-;; Bootstrap use-package
+;; Bootstrap `use-package`, a macro that simplifies package configuration.
 (unless (package-installed-p 'use-package)
-  (package-refresh-contents)
-  (package-install 'use-package))
+  (condition-case err
+      (progn
+        (package-refresh-contents)
+        (package-install 'use-package))
+    (error
+     (message "Failed to install use-package: %s" err))))
 
 (eval-when-compile
   (require 'use-package))
+(setq use-package-always-ensure t)
 
-;; macOS settings
-(when (eq system-type 'darwin)
-  (setq ns-pop-up-frames nil)
-  (setq select-enable-clipboard t))
+;; ####################################################################
+;; # 2. MACOS SPECIFIC TWEAKS
+;; ####################################################################
+(setq mac-command-modifier 'super)
+(setq mac-option-modifier 'meta)
 
-;; UI improvements
-(global-display-line-numbers-mode 1)
-(column-number-mode 1)
+;; ####################################################################
+;; # 3. UI & UX CONFIGURATION
+;; ####################################################################
 
-;; Font configuration (using JetBrains Mono for excellent Unicode support)
-(when (find-font (font-spec :name "JetBrains Mono Medium"))
-  (set-face-attribute 'default nil
-                      :font "JetBrains Mono Medium"
-                      :height 160))
+;; Basic UI Cleanup
+(tool-bar-mode -1)
+(scroll-bar-mode -1)
+(setq inhibit-startup-screen t)
 
-;; Fallback to Monaco if JetBrains Mono is not available
-(when (not (find-font (font-spec :name "JetBrains Mono Medium")))
-  (set-face-attribute 'default nil
-                      :font "Monaco"
-                      :height 160
-                      :weight 'normal))
+;; Font and Theme
+(condition-case nil
+    (set-face-attribute 'default nil :font "SF Mono" :height 160)
+  (error
+   ;; Fallback to other common monospace fonts if SF Mono is not available
+   (let ((fonts '("Monaco" "Menlo" "Consolas" "Courier New")))
+     (catch 'found
+       (dolist (font fonts)
+         (when (member font (font-family-list))
+           (set-face-attribute 'default nil :font font :height 160)
+           (throw 'found font)))))))
 
-;; Font fallback for better Unicode support
-(set-fontset-font t nil "Symbola" nil 'append)
-(set-fontset-font t nil "Apple Color Emoji" nil 'append)
-
-;; Theme (matching iTerm2 dark theme)
+;; Use doom-one theme
 (use-package doom-themes
-  :ensure t
   :config
-  (load-theme 'doom-vibrant t)
-  (doom-themes-visual-bell-config)
-  (doom-themes-org-config))
+  (load-theme 'doom-one t))
 
-;; All-the-icons for doom-modeline
-(use-package all-the-icons
-  :ensure t)
+;; Quality of Life
+(global-display-line-numbers-mode t)
+(delete-selection-mode t)
+(electric-pair-mode t)
+(column-number-mode t)
+(fset 'yes-or-no-p 'y-or-n-p)
 
-;; Modeline (with full Unicode support for SF Mono)
-(use-package doom-modeline
-  :ensure t
-  :init (doom-modeline-mode 1)
-  :custom
-  (doom-modeline-height 25)
-  (doom-modeline-bar-width 4)
-  (doom-modeline-lsp t)
-  (doom-modeline-github t)
-  (doom-modeline-mu4e t)
-  (doom-modeline-irc t)
-  (doom-modeline-minor-modes t)
-  ;; Enable all icons (SF Mono supports Unicode)
-  (doom-modeline-icon t)
-  (doom-modeline-major-mode-icon t)
-  (doom-modeline-buffer-state-icon t)
-  (doom-modeline-buffer-modification-icon t))
+;; ####################################################################
+;; # 4. ESSENTIAL PACKAGES
+;; ####################################################################
 
-;; Company
-(use-package company
-  :ensure t
-  :hook (after-init . global-company-mode))
+;; which-key
+(use-package which-key
+  :config
+  (which-key-mode))
 
-;; Magit
+;; vertico completion
+(use-package vertico
+  :config
+  (when (fboundp 'vertico-mode)
+    (vertico-mode)
+    (setq vertico-cycle t)))
+
+;; marginalia annotations
+(use-package marginalia
+  :after vertico
+  :config
+  (when (fboundp 'marginalia-mode)
+    (marginalia-mode)))
+
+;; orderless completion style
+(use-package orderless
+  :config
+  (setq completion-styles '(orderless basic)
+        completion-category-defaults nil
+        completion-category-overrides '((file (styles basic partial-completion)))))
+
+;; magit
 (use-package magit
-  :ensure t
   :bind ("C-x g" . magit-status))
 
-;; Ivy
-(use-package ivy
-  :ensure t
-  :diminish
-  :config (ivy-mode 1))
+;; Built-in project management
+(require 'project)
 
-(use-package counsel
-  :ensure t
-  :bind (("M-x" . counsel-M-x)
-         ("C-x C-f" . counsel-find-file)))
+;; LSP convenience keybindings (global)
+(global-set-key (kbd "C-c l .") 'xref-find-definitions)
+(global-set-key (kbd "C-c l ,") 'xref-go-back)
+(global-set-key (kbd "C-c l ;") 'xref-find-references)
+(global-set-key (kbd "M-?") 'xref-find-references)
 
-;; Emacs server configuration
+;; Eglot LSP client for intelligent code completion
+(use-package eglot
+  :config
+  ;; TypeScript/JavaScript LSP server configuration
+  (setq eglot-workspace-configuration
+        '((:typescript .
+           ((:preferences . ((:includeInlayParameterNameHints . "all")
+                           (:includeInlayParameterNameHintsWhenArgumentMatchesName . t)
+                           (:includeInlayFunctionParameterTypeHints . t)
+                           (:includeInlayVariableTypeHints . t)
+                           (:includeInlayPropertyDeclarationTypeHints . t)
+                           (:includeInlayFunctionLikeReturnTypeHints . t)
+                           (:includeInlayEnumMemberValueHints . t)))))))
+
+  ;; General eglot settings for better UX
+  (setq eglot-sync-timeout 2
+        eglot-autoshutdown t
+        eglot-extend-to-xref t
+        eglot-events-buffer-size 0
+        eglot-send-changes-idle-time 0.5)
+
+  ;; Keybindings for LSP features
+  (define-key eglot-mode-map (kbd "C-c l r") 'eglot-rename)
+  (define-key eglot-mode-map (kbd "C-c l f") 'eglot-format)
+  (define-key eglot-mode-map (kbd "C-c l a") 'eglot-code-actions)
+  (define-key eglot-mode-map (kbd "C-c l d") 'eglot-find-declaration)
+  (define-key eglot-mode-map (kbd "C-c l i") 'eglot-find-implementation)
+  (define-key eglot-mode-map (kbd "C-c l t") 'eglot-find-typeDefinition)
+  (define-key eglot-mode-map (kbd "C-c l h") 'eldoc)
+  (define-key eglot-mode-map (kbd "C-c l s") 'eglot-signature-eldoc-doc)
+
+  ;; Auto-enable eglot for TypeScript and JavaScript files
+  :hook
+  ((typescript-mode . eglot-ensure)
+   (js2-mode . eglot-ensure)
+   (web-mode . eglot-ensure)))
+
+;; TypeScript and JavaScript syntax support
+(use-package typescript-mode
+  :ensure t
+  :mode (("\\.ts\\'" . typescript-mode)
+         ("\\.tsx\\'" . typescript-mode))
+  :config
+  (setq typescript-indent-level 2))
+
+(use-package js2-mode
+  :ensure t
+  :mode (("\\.js\\'" . js2-mode)
+         ("\\.jsx\\'" . js2-mode))
+  :config
+  (setq js2-basic-offset 2
+        js2-strict-missing-semi-warning nil))
+
+;; Additional LSP utilities
+(use-package xref
+  :config
+  ;; Use project.el for xref definitions
+  (setq xref-search-program 'ripgrep
+        xref-show-definitions-function #'xref-show-definitions-completing))
+
+;; consult
+(use-package consult
+  :bind (("C-s" . consult-line)
+         ("C-x b" . consult-buffer)
+         ("C-c g" . consult-git-grep)
+         ("C-c r" . consult-ripgrep)
+         ("C-c p b" . consult-project-buffer)))
+
+;; ####################################################################
+;; # 5. SERVER MODE CONFIGURATION
+;; ####################################################################
 (require 'server)
-
-;; Start server if not running, otherwise connect to existing server
 (unless (server-running-p)
   (server-start))
 
-;; Ensure server starts when Emacs is started with a file
-(defun ensure-server-start ()
-  "Start Emacs server if not already running."
-  (unless (server-running-p)
-    (server-start)))
+;; Prevent accidentally killing Emacs server with C-x C-c
+(global-unset-key (kbd "C-x C-c"))
+(global-set-key (kbd "C-x C-c") (lambda ()
+                                  (interactive)
+                                  (if (y-or-n-p "Really exit Emacs server? ")
+                                      (save-buffers-kill-emacs)
+                                    (message "Server exit canceled"))))
 
-;; Hook to ensure server is started
-(add-hook 'after-init-hook 'ensure-server-start)
+;; Alternative way to safely kill Emacs
+(global-set-key (kbd "C-x C-S-c") 'save-buffers-kill-emacs)
+
+;; Save autosaved file to temp folder
+(setq backup-directory-alist
+    `((".*" . ,temporary-file-directory)))
+(setq auto-save-file-name-transforms
+    `((".*" ,temporary-file-directory t)))
 
 ;;; init.el ends here

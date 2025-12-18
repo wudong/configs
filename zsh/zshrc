@@ -69,3 +69,6 @@ alias et='emacsclient -t'  # Open file in terminal frame
 alias e='emacsclient -n'   # Open file in existing frame without waiting
 
 ___MY_VMOPTIONS_SHELL_FILE="${HOME}/.jetbrains.vmoptions.sh"; if [ -f "${___MY_VMOPTIONS_SHELL_FILE}" ]; then . "${___MY_VMOPTIONS_SHELL_FILE}"; fi
+
+# Added by Antigravity
+export PATH="/Users/wudong/.antigravity/antigravity/bin:$PATH"

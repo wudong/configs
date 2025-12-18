@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  # Transmission for torrent downloading
+  transmission:
+    image: lscr.io/linuxserver/transmission:latest
+    container_name: transmission
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+      - USER=admin
+      - PASS=admin
+    ports:
+      - "9091:9091"
+      - "51413:51413"
+      - "51413:51413/udp"
+    volumes:
+      - /Users/wudong/transmission-downloads:/downloads
+      - /Users/wudong/transmission-downloads/watch:/watch
+    networks:
+      - media-network
+
+  # Plex Media Server
+  plex:
+    image: lscr.io/linuxserver/plex:latest
+    container_name: plex
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+      - VERSION=docker
+      - PLEX_CLAIM=${PLEX_CLAIM}
+    ports:
+      - "32400:32400"
+      - "32400:32400/udp"
+      - "32401:32401/udp"
+      - "32402:32402/udp"
+      - "32403:32403/udp"
+      - "32404:32404/udp"
+      - "32405:32405/udp"
+      - "32406:32406/udp"
+      - "32407:32407/udp"
+      - "32408:32408/udp"
+      - "32409:32409/udp"
+      - "32410:32410/udp"
+    volumes:
+      - plex_config:/config
+      - /Users/wudong/transmission-downloads:/downloads
+    networks:
+      - media-network
+
+volumes:
+  plex_config:
+
+networks:
+  media-network:
+    driver: bridge
