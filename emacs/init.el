@@ -1,123 +1,228 @@
-;;; init.el --- Emacs configuration optimized for macOS
+;; -*- lexical-binding: t -*-
 
-;; Basic settings
-(setq inhibit-startup-message t)
-(tool-bar-mode -1)
-(menu-bar-mode -1)
-(scroll-bar-mode -1)
+;; ####################################################################
+;; # 1. PACKAGE MANAGEMENT (using the built-in `package.el`)
+;; ####################################################################
+;; This section ensures `package.el` is ready and sets up the MELPA
+;; archive, which has the largest collection of Emacs packages.
 
-;; UTF-8 encoding for proper Unicode support
-(set-language-environment "UTF-8")
-(set-terminal-coding-system 'utf-8)
-(set-keyboard-coding-system 'utf-8)
-(set-selection-coding-system 'utf-8)
-(prefer-coding-system 'utf-8)
-
-;; Package management
 (require 'package)
-(setq package-archives '(("melpa" . "https://melpa.org/packages/")
-                         ("elpa" . "https://elpa.gnu.org/packages/")))
+(setq package-enable-at-startup nil)
+(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+
+
 (package-initialize)
 
-;; Bootstrap use-package
-(unless (package-installed-p 'use-package)
-  (package-refresh-contents)
-  (package-install 'use-package))
+;; use-package is built-in to Emacs 30+
+(require 'use-package)
+(setq use-package-always-ensure t)
 
-(eval-when-compile
-  (require 'use-package))
 
-;; macOS settings
-(when (eq system-type 'darwin)
-  (setq ns-pop-up-frames nil)
-  (setq select-enable-clipboard t))
+;; ####################################################################
+;; # 2. MACOS SPECIFIC TWEAKS
+;; ####################################################################
+;; This is the most important section for a smooth experience on macOS.
 
-;; UI improvements
-(global-display-line-numbers-mode 1)
-(column-number-mode 1)
+;; Use Command key (⌘) as Super, and Option key (⌥) as Meta.
+;; This feels natural on a Mac keyboard.
+(setq mac-command-modifier 'super)
+(setq mac-option-modifier 'meta)
 
-;; Font configuration (using JetBrains Mono for excellent Unicode support)
-(when (find-font (font-spec :name "JetBrains Mono Medium"))
-  (set-face-attribute 'default nil
-                      :font "JetBrains Mono Medium"
-                      :height 160))
 
-;; Fallback to Monaco if JetBrains Mono is not available
-(when (not (find-font (font-spec :name "JetBrains Mono Medium")))
-  (set-face-attribute 'default nil
-                      :font "Monaco"
-                      :height 160
-                      :weight 'normal))
+;; ####################################################################
+;; # 3. UI & UX CONFIGURATION
+;; ####################################################################
 
-;; Font fallback for better Unicode support
-(set-fontset-font t nil "Symbola" nil 'append)
-(set-fontset-font t nil "Apple Color Emoji" nil 'append)
+;; A. Basic UI Cleanup
+;; -------------------
+(tool-bar-mode -1)      ; Disable the toolbar
+(menu-bar-mode t)      ; Disable the menu bar
+(scroll-bar-mode -1)    ; Disable scroll bars
+(setq inhibit-startup-screen t) ; Disable the splash screen
 
-;; Theme (matching iTerm2 dark theme)
+;; B. Font and Theme
+;; -----------------
+;; Set SF Mono as the default font (Apple's excellent coding font)
+(set-face-attribute 'default nil :font "SF Mono" :height 160)
+
+;; Enable programming ligatures (e.g., combines '!=' into '≠')
+(setq-default prettify-symbols-unprettify-at-point 'right-edge)
+(global-prettify-symbols-mode 1)
+
+
+;; Use doom-one theme - a popular dark theme from doom-emacs
 (use-package doom-themes
   :ensure t
   :config
-  (load-theme 'doom-vibrant t)
+  (setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
+        doom-themes-enable-italic t) ; if nil, italics is universally disabled
+  (load-theme 'doom-one t)
+
+  ;; Enable flashing mode-line on errors
   (doom-themes-visual-bell-config)
+
+  ;; Corrects (and improves) org-mode's native fontification.
   (doom-themes-org-config))
 
-;; All-the-icons for doom-modeline
+;; Install all-the-icons for proper icon support
 (use-package all-the-icons
-  :ensure t)
-
-;; Modeline (with full Unicode support for SF Mono)
-(use-package doom-modeline
   :ensure t
-  :init (doom-modeline-mode 1)
-  :custom
-  (doom-modeline-height 25)
-  (doom-modeline-bar-width 4)
-  (doom-modeline-lsp t)
-  (doom-modeline-github t)
-  (doom-modeline-mu4e t)
-  (doom-modeline-irc t)
-  (doom-modeline-minor-modes t)
-  ;; Enable all icons (SF Mono supports Unicode)
-  (doom-modeline-icon t)
-  (doom-modeline-major-mode-icon t)
-  (doom-modeline-buffer-state-icon t)
-  (doom-modeline-buffer-modification-icon t))
+  :if (display-graphic-p))
 
-;; Company
-(use-package company
-  :ensure t
-  :hook (after-init . global-company-mode))
+;; Use doom-modeline for a more attractive status line
+;;(use-package doom-modeline
+;;  :ensure t
+;;  :init (doom-modeline-mode 1)
+;;  :config
+;;  (setq doom-modeline-height 28
+;;        doom-modeline-bar-width 4
+;;        doom-modeline-unicode-fallback t          ; Use fallback for unicode issues
+;;        doom-modeline-buffer-file-name-style 'truncate-upto-project)
 
-;; Magit
+  ;; Make modeline more readable by customizing faces
+;;  (custom-set-faces
+;;;;;;;;   '(mode-line ((t (:background "#3f444a" :foreground "#bbc2cf" :box (:line-width 1 :color "#5B6268")))))
+;;   '(mode-line-inactive ((t (:background "#23272e" :foreground "#5B6268"))))
+   ;; Fix line number colors to match doom-one theme
+;;   '(line-number ((t (:foreground "#5B6268" :background "#3f444a"))))
+;;   '(line-number-current-line ((t (:foreground "#51afef" :background "#3f444a" :weight bold))))
+   ;; Add divider between line numbers and editor
+;;   '(fringe ((t (:background "#21242b" :foreground "#5B6268"))))))
+
+;; C. Quality of Life
+;; ------------------
+(global-display-line-numbers-mode t) ; Show line numbers
+(delete-selection-mode t)            ; Typing replaces the selection
+(electric-pair-mode t)               ; Auto-close parentheses, quotes, etc.
+(column-number-mode t)               ; Show column number in the modeline
+(global-auto-revert-mode t)          ; Auto-refresh buffers when files change on disk
+(fset 'yes-or-no-p 'y-or-n-p)         ; Use y/n instead of "yes" or "no"
+
+;; Open existing files as read-only by default
+(add-hook 'find-file-hook
+          (lambda ()
+            (when (file-exists-p (buffer-file-name))
+              (read-only-mode 1))))
+
+
+;; ####################################################################
+;; # 4. ESSENTIAL PACKAGES
+;; ####################################################################
+
+;; `which-key`: Shows available keybindings when you pause after a prefix key.
+;; Invaluable for learning and discovery.
+(use-package which-key
+  :config
+  (which-key-mode))
+
+;; `vertico`: A modern, minimal, and fast vertical completion UI.
+;; This is a huge improvement over the default completion system.
+(use-package vertico
+  :init
+  (vertico-mode)
+  ;; Add some tweaks for a better experience.
+  (setq vertico-cycle t))
+
+;; `marginalia`: Adds helpful annotations to completion candidates in the minibuffer.
+(use-package marginalia
+  :after vertico
+  :init
+  (marginalia-mode))
+
+;; `orderless`: A more powerful and intuitive completion style.
+;; Allows you to type space-separated terms in any order.
+(use-package orderless
+  :init
+  (setq completion-styles '(orderless basic)
+        completion-category-defaults nil
+        completion-category-overrides '((file (styles basic partial-completion)))))
+
+;; Make saving the file list on exit less annoying
+(setq save-place-file (concat user-emacs-directory "places"))
+
+;; some more plugins
 (use-package magit
-  :ensure t
   :bind ("C-x g" . magit-status))
 
-;; Ivy
-(use-package ivy
-  :ensure t
-  :diminish
-  :config (ivy-mode 1))
 
-(use-package counsel
-  :ensure t
-  :bind (("M-x" . counsel-M-x)
-         ("C-x C-f" . counsel-find-file)))
+;; ediff config
+(setq ediff-window-setup-function 'ediff-setup-windows-plain)
+(setq ediff-split-window-function 'split-window-horizontally)
 
-;; Emacs server configuration
+;; A suite of powerful search and navigation commands
+(use-package consult
+  ;; Bind keys globally. The syntax is a simple list of ("key" . command).
+  :bind (("C-s" . consult-line)
+         ("C-x b" . consult-buffer)
+         ("C-c g" . consult-git-grep)
+         ("C-c r" . consult-ripgrep)))
+
+;; Set the file where customizations are saved
+(setq custom-file (concat user-emacs-directory "custom.el"))
+
+(use-package markdown-mode
+  :ensure t
+  :mode ("README\\.md\\'" . gfm-mode)
+  :init (setq markdown-command "multimarkdown")
+  :bind (:map markdown-mode-map
+              ("C-c C-e" . markdown-do)))
+
+;; TypeScript and JavaScript syntax support
+(use-package typescript-mode
+  :ensure t
+  :mode (("\\.ts\\'" . typescript-mode)
+         ("\\.tsx\\'" . typescript-mode))
+  :config
+  (setq typescript-indent-level 2))
+
+(use-package js2-mode
+  :ensure t
+  :mode (("\\.js\\'" . js2-mode)
+         ("\\.jsx\\'" . js2-mode))
+  :config
+  (setq js2-basic-offset 2
+        js2-strict-missing-semi-warning nil))
+
+;; Additional JavaScript/TypeScript enhancements
+(use-package web-mode
+  :ensure t
+  :mode (("\\.html\\'" . web-mode)
+         ("\\.vue\\'" . web-mode)
+         ("\\.svelte\\'" . web-mode))
+  :config
+  (setq web-mode-markup-indent-offset 2
+        web-mode-css-indent-offset 2
+        web-mode-code-indent-offset 2))
+
+;; JSON support
+(use-package json-mode
+  :ensure t
+  :mode (("\\.json\\'" . json-mode)
+         ("\\.jsonc\\'" . json-mode)))
+
+
+
+;; ####################################################################
+;; # 5. SERVER MODE CONFIGURATION
+;; ####################################################################
+;; Start Emacs server for fast client connections
 (require 'server)
-
-;; Start server if not running, otherwise connect to existing server
 (unless (server-running-p)
   (server-start))
 
-;; Ensure server starts when Emacs is started with a file
-(defun ensure-server-start ()
-  "Start Emacs server if not already running."
-  (unless (server-running-p)
-    (server-start)))
+;; Prevent accidentally killing Emacs server with C-x C-c
+(global-unset-key (kbd "C-x C-c"))
+(global-set-key (kbd "C-x C-c") (lambda ()
+                                  (interactive)
+                                  (if (y-or-n-p "Really exit Emacs server? ")
+                                      (save-buffers-kill-emacs)
+                                    (message "Server exit canceled"))))
 
-;; Hook to ensure server is started
-(add-hook 'after-init-hook 'ensure-server-start)
+;; Alternative way to safely kill Emacs
+(global-set-key (kbd "C-x C-S-c") 'save-buffers-kill-emacs)
 
-;;; init.el ends here
+;; Save autosaved file to temp folder.
+(setq backup-directory-alist
+    `((".*" . ,temporary-file-directory)))
+(setq auto-save-file-name-transforms
+    `((".*" ,temporary-file-directory t)))
